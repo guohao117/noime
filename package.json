@@ -2,8 +2,9 @@
   "name": "noime",
   "displayName": "NoIME",
   "description": "For modal editors, every keystroke in normal mode counts. However, accidental interference from your active Input Method Editor (IME) can disrupt your command workflow. NoIME is a lightweight, reliable Visual Studio Code extension that automatically disables your IME when you enter normal mode, ensuring that your editor commands aren't misinterpreted or intercepted.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "GuoHao117",
+  "icon": "images/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/guohao117/noime.git"
