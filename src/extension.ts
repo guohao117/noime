@@ -407,8 +407,12 @@ class IMEService {
         }
         
         try {
-            await this.api.switchToEnglishIM();
+            if (await this.api.obtainIM() === this.api.getChineseIM()) {
+                await this.api.switchToEnglishIM();
             debugChannel.appendLine('Successfully switched to English input method');
+            } else {
+                debugChannel.appendLine('Not using CJK input method, skipping switch');
+            }
         } catch (error) {
             debugChannel.appendLine(`Error switching input method: ${error}`);
         }
