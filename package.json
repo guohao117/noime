@@ -26,6 +26,7 @@
     "onStartupFinished"
   ],
   "main": "./dist/extension.js",
+  "extensionKind": ["ui", "workspace"],
   "contributes": {
     "configuration": {
       "title": "NoIME",
