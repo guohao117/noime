@@ -7,6 +7,28 @@ const debugChannel = vscode.window.createOutputChannel('NoIME');
 let imeAPI: any; // API provided by ime-and-cursor
 
 /**
+ * Debug logger utility
+ */
+class DebugLogger {
+    private static isDebugEnabled(): boolean {
+        const config = vscode.workspace.getConfiguration('noime');
+        return config.get('enableDebugLog') as boolean ?? false;
+    }
+    
+    static log(message: string): void {
+        if (this.isDebugEnabled()) {
+            debugChannel.appendLine(message);
+        }
+    }
+    
+    static show(): void {
+        if (this.isDebugEnabled()) {
+            debugChannel.show(true);
+        }
+    }
+}
+
+/**
  * Mode detection strategy interface (Strategy Pattern)
  */
 interface IModeDetectionStrategy {
@@ -102,7 +124,7 @@ class VSCodeVimObserver extends BaseModalEditorObserver {
     
     register(context: vscode.ExtensionContext, onModeChange: (mode: any) => void): boolean {
         // TODO: API not verified, not implemented yet
-        debugChannel.appendLine(`VSCodeVim API not verified, integration not implemented yet`);
+        DebugLogger.log(`VSCodeVim API not verified, integration not implemented yet`);
         return false; // Registration failed
     }
 }
@@ -122,7 +144,7 @@ class NeovimObserver extends BaseModalEditorObserver {
     
     register(context: vscode.ExtensionContext, onModeChange: (mode: any) => void): boolean {
         // TODO: API not verified, not implemented yet
-        debugChannel.appendLine(`Neovim API not verified, integration not implemented yet`);
+        DebugLogger.log(`Neovim API not verified, integration not implemented yet`);
         return false; // Registration failed
     }
 }
@@ -155,12 +177,12 @@ class DanceHelixObserver extends BaseModalEditorObserver {
                     context.subscriptions.push(api.extension.editors.onModeDidChange((modeObj: any) => {
                         onModeChange(modeObj?.mode?.name);
                     }));
-                    debugChannel.appendLine(`Successfully registered ${extensionId} onModeDidChange event`);
+                    DebugLogger.log(`Successfully registered ${extensionId} onModeDidChange event`);
                     return true; // Registration succeeded
                 }
             }
         }
-        debugChannel.appendLine(`Failed to register any Dance/Helix variants`);
+        DebugLogger.log(`Failed to register any Dance/Helix variants`);
         return false; // Registration failed
     }
 }
@@ -207,7 +229,7 @@ class CursorStyleObserver extends BaseModalEditorObserver {
             // Only report changes
             if (detectedMode !== this.currentMode) {
                 this.currentMode = detectedMode;
-                debugChannel.appendLine(`CursorStyle detected mode: ${detectedMode}`);
+                DebugLogger.log(`CursorStyle detected mode: ${detectedMode}`);
                 onModeChange(detectedMode);
             }
         });
@@ -220,7 +242,7 @@ class CursorStyleObserver extends BaseModalEditorObserver {
                 e.selections.some(sel => !sel.isEmpty && !this.isLineEndCursor(sel, editor))) {
                 if (this.currentMode !== 'visual') {
                     this.currentMode = 'visual';
-                    debugChannel.appendLine('CursorStyle detected visual mode');
+                    DebugLogger.log('CursorStyle detected visual mode');
                     onModeChange('visual');
                 }
             }
@@ -230,7 +252,7 @@ class CursorStyleObserver extends BaseModalEditorObserver {
         this.disposables.push(cursorStyleWatcher, selectionWatcher);
         context.subscriptions.push(...this.disposables);
         
-        debugChannel.appendLine('Registered cursor style observer');
+        DebugLogger.log('Registered cursor style observer');
         return true; // Registration succeeded
     }
     
@@ -292,7 +314,7 @@ class ModalEditorsManager {
                 continue;
             }
             
-            debugChannel.appendLine(`Setting up ${observer.displayName} observer`);
+            DebugLogger.log(`Setting up ${observer.displayName} observer`);
             
             try {
                 // Try to register with specific handler
@@ -306,11 +328,11 @@ class ModalEditorsManager {
                 // If registration failed, add to failed list for fallback
                 if (!success) {
                     failedObservers.push(observer);
-                    debugChannel.appendLine(`${observer.displayName} registration unsuccessful`);
+                    DebugLogger.log(`${observer.displayName} registration unsuccessful`);
                 }
             } catch (error) {
                 // Log error and add to failed list
-                debugChannel.appendLine(`Error registering ${observer.displayName}: ${error}`);
+                DebugLogger.log(`Error registering ${observer.displayName}: ${error}`);
                 this.registrationStatus.set(observer.displayName, false);
                 failedObservers.push(observer);
             }
@@ -321,7 +343,7 @@ class ModalEditorsManager {
 
         // Register fallback observer only if all primary observers failed
         if (allObserversFailed) {
-            debugChannel.appendLine('All primary observers failed, using cursor style fallback');
+            DebugLogger.log('All primary observers failed, using cursor style fallback');
             
             // Register the fallback cursor style observer
             this.fallbackObserver.register(context, (mode) => {
@@ -330,13 +352,13 @@ class ModalEditorsManager {
         } else if (failedObservers.length > 0) {
             // Some observers failed, but others succeeded - log but don't use fallback
             const failedNames = failedObservers.map(o => o.displayName).join(', ');
-            debugChannel.appendLine(`Some observers failed (${failedNames}), but using successful observers`);
+            DebugLogger.log(`Some observers failed (${failedNames}), but using successful observers`);
         }
 
         // Log summary of observer registration status
-        debugChannel.appendLine('Observer registration summary:');
+        DebugLogger.log('Observer registration summary:');
         this.registrationStatus.forEach((status, name) => {
-            debugChannel.appendLine(`- ${name}: ${status ? 'Success' : 'Failed'}`);
+            DebugLogger.log(`- ${name}: ${status ? 'Success' : 'Failed'}`);
         });
     }
     
@@ -402,19 +424,19 @@ class IMEService {
     
     async switchToEnglishIM(): Promise<void> {
         if (!this.api) {
-            debugChannel.appendLine('IME API not initialized');
+            DebugLogger.log('IME API not initialized');
             return;
         }
         
         try {
             if (await this.api.obtainIM() === this.api.getChineseIM()) {
                 await this.api.switchToEnglishIM();
-                debugChannel.appendLine('Successfully switched to English input method');
+                DebugLogger.log('Successfully switched to English input method');
             } else {
-                debugChannel.appendLine('Not using CJK input method, skipping switch');
+                DebugLogger.log('Not using CJK input method, skipping switch');
             }
         } catch (error) {
-            debugChannel.appendLine(`Error switching input method: ${error}`);
+            DebugLogger.log(`Error switching input method: ${error}`);
         }
     }
 }
@@ -435,7 +457,7 @@ class NoIMEController {
      * Initialize extension
      */
     async initialize(context: vscode.ExtensionContext): Promise<void> {
-        debugChannel.appendLine('NoIME extension initializing');
+        DebugLogger.log('NoIME extension initializing');
         
         // Get ime-and-cursor extension API
         await this.setupIMEAPI();
@@ -446,8 +468,8 @@ class NoIMEController {
         // Register configuration change listener
         this.registerConfigurationChangeListener(context);
         
-        // Show debug channel
-        debugChannel.show(true);
+        // Show debug channel if debug is enabled
+        DebugLogger.show();
     }
     
     /**
@@ -458,20 +480,20 @@ class NoIMEController {
         if (imeExtension) {
             if (imeExtension.isActive) {
                 this.imeService.setAPI(imeExtension.exports);
-                debugChannel.appendLine('Successfully obtained IME API');
+                DebugLogger.log('Successfully obtained IME API');
             } else {
-                debugChannel.appendLine('Waiting for IME extension to activate...');
+                DebugLogger.log('Waiting for IME extension to activate...');
                 try {
                     const api = await imeExtension.activate();
                     this.imeService.setAPI(api);
-                    debugChannel.appendLine('Successfully obtained IME API');
+                    DebugLogger.log('Successfully obtained IME API');
                 } catch (error) {
-                    debugChannel.appendLine(`Failed to activate IME extension: ${error}`);
+                    DebugLogger.log(`Failed to activate IME extension: ${error}`);
                 }
             }
         } else {
             vscode.window.showErrorMessage('ime-and-cursor extension not found. This extension cannot work properly.');
-            debugChannel.appendLine('ime-and-cursor extension not found');
+            DebugLogger.log('ime-and-cursor extension not found');
         }
     }
     
@@ -482,13 +504,13 @@ class NoIMEController {
         const config = vscode.workspace.getConfiguration('noime');
         const vimExtensionType = config.get('vimExtension') as string;
         
-        debugChannel.appendLine(`Setting up modal editor mode detection, extension type: ${vimExtensionType}`);
+        DebugLogger.log(`Setting up modal editor mode detection, extension type: ${vimExtensionType}`);
         
         // Create mode change handler function
         const handleModeChange = async (mode: any, extensionType?: string): Promise<void> => {
             if (!mode) {return;}
             
-            debugChannel.appendLine(`Handling mode change: ${typeof mode === 'string' ? mode : JSON.stringify(mode)}`);
+            DebugLogger.log(`Handling mode change: ${typeof mode === 'string' ? mode : JSON.stringify(mode)}`);
             
             // Use observer-specific mode detection
             let isNormal = false;
@@ -504,7 +526,7 @@ class NoIMEController {
             }
             
             if (isNormal) {
-                debugChannel.appendLine('Normal mode detected, switching to English input method');
+                DebugLogger.log('Normal mode detected, switching to English input method');
                 await this.imeService.switchToEnglishIM();
             }
         };
@@ -523,21 +545,21 @@ class NoIMEController {
                     
                     // If registration failed, use fallback
                     if (!success) {
-                        debugChannel.appendLine(`${observer.displayName} registration failed, using cursor style fallback`);
+                        DebugLogger.log(`${observer.displayName} registration failed, using cursor style fallback`);
                         const fallback = new CursorStyleObserver();
                         fallback.register(context, (mode) => {
                             handleModeChange(mode, observer.displayName);
                         });
                     }
                 } catch (error) {
-                    debugChannel.appendLine(`Error setting up ${observer.displayName}, using fallback: ${error}`);
+                    DebugLogger.log(`Error setting up ${observer.displayName}, using fallback: ${error}`);
                     const fallback = new CursorStyleObserver();
                     fallback.register(context, (mode) => {
                         handleModeChange(mode, observer.displayName);
                     });
                 }
             } else {
-                debugChannel.appendLine(`No matching handler found for: ${vimExtensionType}`);
+                DebugLogger.log(`No matching handler found for: ${vimExtensionType}`);
             }
         }
     }
@@ -549,7 +571,7 @@ class NoIMEController {
         context.subscriptions.push(
             vscode.workspace.onDidChangeConfiguration(e => {
                 if (e.affectsConfiguration('noime')) {
-                    debugChannel.appendLine('Configuration changed, reloading');
+                    DebugLogger.log('Configuration changed, reloading');
                     
                     // Reset mode detection
                     this.setupModalEditorDetection(context);
@@ -564,7 +586,7 @@ let controller: NoIMEController;
 
 // Activate extension
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-    debugChannel.appendLine('NoIME extension activated');
+    DebugLogger.log('NoIME extension activated');
     
     // Create manager and service
     const modalEditorsManager = new ModalEditorsManager();
@@ -577,5 +599,5 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
 // Deactivate extension
 export function deactivate(): void {
-    debugChannel.appendLine('NoIME extension deactivated');
+    DebugLogger.log('NoIME extension deactivated');
 }
